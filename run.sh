@@ -233,7 +233,7 @@ fi
 
 if [[ "$IS_INSTALL_NAPCAT" == "true" ]]; then
     echo -e "${GREEN}安装 NapCat...${RESET}"
-    curl -o napcat.sh https://nclatest.znin.net/NapNeko/NapCat-Installer/main/script/install.sh && bash napcat.sh
+    curl -o napcat.sh https://nclatest.znin.net/NapNeko/NapCat-Installer/main/script/install.sh && bash napcat.sh --cli y --docker n
 fi
 
 echo -e "${GREEN}创建 Python 虚拟环境...${RESET}"
