@@ -263,7 +263,7 @@ After=network.target mongod.service
 Type=simple
 WorkingDirectory=$INSTALL_DIR/repo/
 ExecStart=$INSTALL_DIR/venv/bin/python3 bot.py
-ExecStop=/bin/kill -2 $MAINPID
+ExecStop=/bin/kill -3 $MAINPID
 Restart=always
 RestartSec=10s
 
