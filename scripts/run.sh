@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# MaiCore & Nonebot adapter一键安装脚本 by Cookie_987
+# MaiCore & NapCat Adapter一键安装脚本 by Cookie_987
 # 适用于Arch/Ubuntu 24.10/Debian 12/CentOS 9
 # 请小心使用任何一键脚本！
 
-INSTALLER_VERSION="0.0.2-refactor"
+INSTALLER_VERSION="0.0.5-refactor"
 LANG=C.UTF-8
 
 # 如无法访问GitHub请修改此处镜像地址
@@ -19,10 +19,10 @@ RESET="\e[0m"
 
 declare -A REQUIRED_PACKAGES=(
     ["common"]="git sudo python3 curl gnupg"
-    ["debian"]="python3-venv python3-pip"
-    ["ubuntu"]="python3-venv python3-pip"
-    ["centos"]="python3-pip"
-    ["arch"]="python-virtualenv python-pip"
+    ["debian"]="python3-venv python3-pip build-essential"
+    ["ubuntu"]="python3-venv python3-pip build-essential"
+    ["centos"]="epel-release python3-pip python3-devel gcc gcc-c++ make"
+    ["arch"]="python-virtualenv python-pip base-devel"
 )
 
 # 默认项目目录
@@ -31,9 +31,8 @@ DEFAULT_INSTALL_DIR="/opt/maicore"
 # 服务名称
 SERVICE_NAME="maicore"
 SERVICE_NAME_WEB="maicore-web"
-SERVICE_NAME_NBADAPTER="maicore-nonebot-adapter"
+SERVICE_NAME_NBADAPTER="maibot-napcat-adapter"
 
-IS_INSTALL_MONGODB=false
 IS_INSTALL_NAPCAT=false
 IS_INSTALL_DEPENDENCIES=false
 
@@ -59,9 +58,9 @@ show_menu() {
             "1" "启动MaiCore" \
             "2" "停止MaiCore" \
             "3" "重启MaiCore" \
-            "4" "启动Nonebot adapter" \
-            "5" "停止Nonebot adapter" \
-            "6" "重启Nonebot adapter" \
+            "4" "启动NapCat Adapter" \
+            "5" "停止NapCat Adapter" \
+            "6" "重启NapCat Adapter" \
             "7" "拉取最新MaiCore仓库" \
             "8" "切换分支" \
             "9" "退出" 3>&1 1>&2 2>&3)
@@ -83,15 +82,15 @@ show_menu() {
                 ;;
             4)
                 systemctl start ${SERVICE_NAME_NBADAPTER}
-                whiptail --msgbox "✅Nonebot adapter已启动" 10 60
+                whiptail --msgbox "✅NapCat Adapter已启动" 10 60
                 ;;
             5)
                 systemctl stop ${SERVICE_NAME_NBADAPTER}
-                whiptail --msgbox "🛑Nonebot adapter已停止" 10 60
+                whiptail --msgbox "🛑NapCat Adapter已停止" 10 60
                 ;;
             6)
                 systemctl restart ${SERVICE_NAME_NBADAPTER}
-                whiptail --msgbox "🔄Nonebot adapter已重启" 10 60
+                whiptail --msgbox "🔄NapCat Adapter已重启" 10 60
                 ;;
             7)
                 update_dependencies
@@ -255,7 +254,6 @@ run_installation() {
                 return
             elif [[ "$ID" == "arch" ]]; then
                 whiptail --title "⚠️ 兼容性警告" --msgbox "NapCat无可用的 Arch Linux 官方安装方法，将无法自动安装NapCat。\n\n您可尝试在AUR中搜索相关包。" 10 60
-                whiptail --title "⚠️ 兼容性警告" --msgbox "MongoDB无可用的 Arch Linux 官方安装方法，将无法自动安装MongoDB。\n\n您可尝试在AUR中搜索相关包。" 10 60
                 return
             else
                 whiptail --title "🚫 不支持的系统" --msgbox "此脚本仅支持 Arch/Debian 12 (Bookworm)/Ubuntu 24.10 (Oracular Oriole)/CentOS9！\n当前系统: $PRETTY_NAME\n安装已终止。" 10 60
@@ -281,16 +279,6 @@ run_installation() {
             PKG_MANAGER="pacman"
             ;;
     esac
-
-    # 检查MongoDB
-    check_mongodb() {
-        if command -v mongod &>/dev/null; then
-            MONGO_INSTALLED=true
-        else
-            MONGO_INSTALLED=false
-        fi
-    }
-    check_mongodb
 
     # 检查NapCat
     check_napcat() {
@@ -330,19 +318,7 @@ run_installation() {
         fi
     }
     install_packages
-
-    # 安装MongoDB
-    install_mongodb() {
-        [[ $MONGO_INSTALLED == true ]] && return
-        whiptail --title "📦 [3/6] 软件包检查" --yesno "检测到未安装MongoDB，是否安装？\n如果您想使用远程数据库，请跳过此步。" 10 60 && {
-            IS_INSTALL_MONGODB=true
-        }
-    }
-
-    # 仅在非Arch系统上安装MongoDB
-    [[ "$ID" != "arch" ]] && install_mongodb
        
-
     # 安装NapCat
     install_napcat() {
         [[ $NAPCAT_INSTALLED == true ]] && return
@@ -357,8 +333,8 @@ run_installation() {
     # Python版本检查
     check_python() {
         PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-        if ! python3 -c "import sys; exit(0) if sys.version_info >= (3,9) else exit(1)"; then
-            whiptail --title "⚠️ [4/6] Python 版本过低" --msgbox "检测到 Python 版本为 $PYTHON_VERSION，需要 3.9 或以上！\n请升级 Python 后重新运行本脚本。" 10 60
+        if ! python3 -c "import sys; exit(0) if sys.version_info >= (3,10) else exit(1)"; then
+            whiptail --title "⚠️ [4/6] Python 版本过低" --msgbox "检测到 Python 版本为 $PYTHON_VERSION，需要 3.10 或以上！\n请升级 Python 后重新运行本脚本。" 10 60
             exit 1
         fi
     }
@@ -410,12 +386,11 @@ run_installation() {
     # 确认安装
     confirm_install() {
         local confirm_msg="请确认以下更改：\n\n"
-        confirm_msg+="📂 安装MaiCore、Nonebot Adapter到: $INSTALL_DIR\n"
+        confirm_msg+="📂 安装MaiCore、NapCat Adapter到: $INSTALL_DIR\n"
         confirm_msg+="🔀 分支: $BRANCH\n"
         [[ $IS_INSTALL_DEPENDENCIES == true ]] && confirm_msg+="📦 安装依赖：${missing_packages[@]}\n"
-        [[ $IS_INSTALL_MONGODB == true || $IS_INSTALL_NAPCAT == true ]] && confirm_msg+="📦 安装额外组件：\n"
-        
-        [[ $IS_INSTALL_MONGODB == true ]] && confirm_msg+="  - MongoDB\n"
+        [[ $IS_INSTALL_NAPCAT == true ]] && confirm_msg+="📦 安装额外组件：\n"
+
         [[ $IS_INSTALL_NAPCAT == true ]] && confirm_msg+="  - NapCat\n"
         confirm_msg+="\n注意：本脚本默认使用ghfast.top为GitHub进行加速，如不想使用请手动修改脚本开头的GITHUB_REPO变量。"
 
@@ -438,39 +413,6 @@ run_installation() {
             pacman -S --noconfirm "${missing_packages[@]}"
             ;;
         esac
-    fi
-
-    if [[ $IS_INSTALL_MONGODB == true ]]; then
-        echo -e "${GREEN}安装 MongoDB...${RESET}"
-        case "$ID" in
-            debian)
-                curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
-                echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | tee /etc/apt/sources.list.d/mongodb-org-8.0.list
-                apt update
-                apt install -y mongodb-org
-                systemctl enable --now mongod
-                ;;
-            ubuntu)
-                curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
-                echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | tee /etc/apt/sources.list.d/mongodb-org-8.0.list
-                apt update
-                apt install -y mongodb-org
-                systemctl enable --now mongod
-                ;;
-            centos)
-                cat > /etc/yum.repos.d/mongodb-org-8.0.repo <<EOF
-[mongodb-org-8.0]
-name=MongoDB Repository
-baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/
-gpgcheck=1
-enabled=1
-gpgkey=https://pgp.mongodb.com/server-8.0.asc
-EOF
-                yum install -y mongodb-org
-                systemctl enable --now mongod
-                ;;
-        esac
-
     fi
 
     if [[ $IS_INSTALL_NAPCAT == true ]]; then
@@ -499,50 +441,28 @@ EOF
     }
 
     echo -e "${GREEN}克隆 nonebot-plugin-maibot-adapters 仓库...${RESET}"
-    git clone $GITHUB_REPO/MaiM-with-u/nonebot-plugin-maibot-adapters.git || {
-        echo -e "${RED}克隆 nonebot-plugin-maibot-adapters 仓库失败！${RESET}"
+    git clone $GITHUB_REPO/MaiM-with-u/MaiBot-Napcat-Adapter.git || {
+        echo -e "${RED}克隆 MaiBot-Napcat-Adapter.git 仓库失败！${RESET}"
         exit 1
     }
 
 
     echo -e "${GREEN}安装Python依赖...${RESET}"
     pip install -r MaiBot/requirements.txt
-    pip install nb-cli
-    pip install nonebot-adapter-onebot
-    pip install 'nonebot2[fastapi]'
+    cd MaiBot
+    pip install uv
+    uv pip install -i https://mirrors.aliyun.com/pypi/simple -r requirements.txt   
+    cd ..
 
     echo -e "${GREEN}安装maim_message依赖...${RESET}"
     cd maim_message
-    pip install -e .
+    uv pip install -i https://mirrors.aliyun.com/pypi/simple -e .
     cd ..
 
-    echo -e "${GREEN}部署Nonebot adapter...${RESET}"
-    cd MaiBot
-    mkdir nonebot-maibot-adapter
-    cd nonebot-maibot-adapter
-    cat > pyproject.toml <<EOF
-[project]
-name = "nonebot-maibot-adapter"
-version = "0.1.0"
-description = "nonebot-maibot-adapter"
-readme = "README.md"
-requires-python = ">=3.9, <4.0"
-
-[tool.nonebot]
-adapters = [
-    { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" }
-]
-plugins = []
-plugin_dirs = ["src/plugins"]
-builtin_plugins = []
-EOF
-
-    echo "Manually created by run.sh" > README.md
-    mkdir src
-    cp -r ../../nonebot-plugin-maibot-adapters/nonebot_plugin_maibot_adapters src/plugins/nonebot_plugin_maibot_adapters
+    echo -e "${GREEN}部署MaiBot Napcat Adapter...${RESET}"
+    cd MaiBot-Napcat-Adapter
+    uv pip install -i https://mirrors.aliyun.com/pypi/simple -r requirements.txt
     cd ..
-    cd ..
-
 
     echo -e "${GREEN}同意协议...${RESET}"
 
@@ -559,7 +479,7 @@ EOF
     cat > /etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
 Description=MaiCore
-After=network.target mongod.service ${SERVICE_NAME_NBADAPTER}.service
+After=network.target ${SERVICE_NAME_NBADAPTER}.service
 
 [Service]
 Type=simple
@@ -572,31 +492,31 @@ RestartSec=10s
 WantedBy=multi-user.target
 EOF
 
-    cat > /etc/systemd/system/${SERVICE_NAME_WEB}.service <<EOF
+#     cat > /etc/systemd/system/${SERVICE_NAME_WEB}.service <<EOF
+# [Unit]
+# Description=MaiCore WebUI
+# After=network.target ${SERVICE_NAME}.service
+
+# [Service]
+# Type=simple
+# WorkingDirectory=${INSTALL_DIR}/MaiBot
+# ExecStart=$INSTALL_DIR/venv/bin/python3 webui.py
+# Restart=always
+# RestartSec=10s
+
+# [Install]
+# WantedBy=multi-user.target
+# EOF
+
+    cat > /etc/systemd/system/${SERVICE_NAME_NBADAPTER}.service <<EOF
 [Unit]
-Description=MaiCore WebUI
+Description=MaiBot Napcat Adapter
 After=network.target mongod.service ${SERVICE_NAME}.service
 
 [Service]
 Type=simple
-WorkingDirectory=${INSTALL_DIR}/MaiBot
-ExecStart=$INSTALL_DIR/venv/bin/python3 webui.py
-Restart=always
-RestartSec=10s
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    cat > /etc/systemd/system/${SERVICE_NAME_NBADAPTER}.service <<EOF
-[Unit]
-Description=Maicore Nonebot adapter
-After=network.target mongod.service
-
-[Service]
-Type=simple
-WorkingDirectory=${INSTALL_DIR}/MaiBot/nonebot-maibot-adapter
-ExecStart=/bin/bash -c "source $INSTALL_DIR/venv/bin/activate && nb run --reload"
+WorkingDirectory=${INSTALL_DIR}/MaiBot-Napcat-Adapter
+ExecStart=$INSTALL_DIR/venv/bin/python3 main.py
 Restart=always
 RestartSec=10s
 
@@ -605,7 +525,6 @@ WantedBy=multi-user.target
 EOF
 
     systemctl daemon-reload
-    systemctl enable ${SERVICE_NAME}
 
     # 保存安装信息
     echo "INSTALLER_VERSION=${INSTALLER_VERSION}" > /etc/maicore_install.conf

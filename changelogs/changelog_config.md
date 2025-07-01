@@ -22,7 +22,7 @@
 ## [0.0.11] - 2025-3-12
 ### Added
 - 新增了 `schedule` 配置项，用于配置日程表生成功能
-- 新增了 `response_spliter` 配置项，用于控制回复分割
+- 新增了 `response_splitter` 配置项，用于控制回复分割
 - 新增了 `experimental` 配置项，用于实验性功能开关
 - 新增了 `llm_observation` 和 `llm_sub_heartflow` 模型配置
 - 新增了 `llm_heartflow` 模型配置
@@ -33,7 +33,7 @@
 - 调整了部分配置项的默认值
 - 调整了配置项的顺序，将 `groups` 配置项移到了更靠前的位置
 - 在 `message` 配置项中：
-  - 新增了 `max_response_length` 参数
+  - 新增了 `model_max_output_length` 参数
 - 在 `willing` 配置项中新增了 `emoji_response_penalty` 参数
 - 将 `personality` 配置项中的 `prompt_schedule` 重命名为 `prompt_schedule_gen`
 
